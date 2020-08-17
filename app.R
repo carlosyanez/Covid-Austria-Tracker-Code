@@ -45,7 +45,7 @@ server <- function(input, output) {
      
      geom_line(data=(retrieved_data$retrieved_data %>% filter(State %in% c("Total"))),
                aes(x=Date, y=active), colour="blue") +
-     labs(title="Active Cases in Austria per State",
+     labs(title="Active Cases in Austria",
           x="Date",
           y="Active Cases",
           caption="Data: https://info.gesundheitsministerium.at" ) +
@@ -70,7 +70,7 @@ server <- function(input, output) {
      
      geom_line(data=(retrieved_data$retrieved_data %>% filter(State %in% c("Total"))),
                aes(x=Date, y=new_cases), colour="blue") +
-     labs(title="New Daily Cases in Austria per State",
+     labs(title="New Daily Cases in Austria",
           x="Date",
           y="New Cases",
           caption="Data: https://info.gesundheitsministerium.at" ) +
