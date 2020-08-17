@@ -103,32 +103,32 @@ retrieved_data <- retrieved_data %>% mutate(new_cases=ifelse(is.na(previous_date
 
 #rm(list=ls()[! ls() %in% c("retrieved_data")])
 
-active_plot<- retrieved_data %>% filter(!(State %in% c("Total"))) %>% 
-  
-  ggplot(aes(x=Date,y=active,fill=State)) +
-  geom_bar(stat="identity") +
-  theme_economist_white() + 
-  scale_color_tableau()+
-  scale_fill_tableau() +
-  geom_line(data=(retrieved_data %>% filter(State %in% c("Total"))),
-            aes(x=Date, y=active), colour="blue") +
-  labs(title="Cases in Austria per State",
-       x="Date",
-       y="Active Cases") 
+#active_plot<- retrieved_data %>% filter(!(State %in% c("Total"))) %>% 
+#  
+#  ggplot(aes(x=Date,y=active,fill=State)) +
+#  geom_bar(stat="identity") +
+#  theme_economist_white() + 
+#  scale_color_tableau()+
+#  scale_fill_tableau() +
+#  geom_line(data=(retrieved_data %>% filter(State %in% c("Total"))),
+#            aes(x=Date, y=active), colour="blue") +
+#  labs(title="Cases in Austria per State",
+#       x="Date",
+#       y="Active Cases") 
 
 
-new_plot<- retrieved_data %>% filter(!(State %in% c("Total"))) %>% 
+#new_plot<- retrieved_data %>% filter(!(State %in% c("Total"))) %>% 
   
-  ggplot(aes(x=Date,y=new_cases,fill=State)) +
-  geom_bar(stat="identity") +
-  theme_economist_white() + 
-  scale_color_tableau()+
-  scale_fill_tableau() +
-  geom_line(data=(retrieved_data %>% filter(State %in% c("Total"))),
-            aes(x=Date, y=new_cases), colour="blue") +
-  labs(title="New Cases in Austria per State",
-       x="Date",
-       y="New Cases") 
+#  ggplot(aes(x=Date,y=new_cases,fill=State)) +
+#  geom_bar(stat="identity") +
+#  theme_economist_white() + 
+#  scale_color_tableau()+
+#  scale_fill_tableau() +
+#  geom_line(data=(retrieved_data %>% filter(State %in% c("Total"))),
+#            aes(x=Date, y=new_cases), colour="blue") +
+#  labs(title="New Cases in Austria per State",
+#       x="Date",
+#       y="New Cases") 
 
 #active_plot
 #new_plot
@@ -136,8 +136,8 @@ if(special_flag==1){
       covid_austria <-vector(mode = "list", length = 0)
 
       covid_austria$retrieved_data <- retrieved_data
-      covid_austria$active_plot <- active_plot
-      covid_austria$new_plot <- new_plot
+#      covid_austria$active_plot <- active_plot
+#      covid_austria$new_plot <- new_plot
       covid_austria$timestamp <- now()
     saveRDS(covid_austria, file="retrieved_data.rds") 
 }
