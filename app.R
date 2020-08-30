@@ -123,7 +123,7 @@ server <- function(input, output) {
      select(Date,Group,value) %>%
      ggplot(aes(x=Date,y=value,fill=Group)) + geom_bar(stat="identity") +
      theme_economist_white() + 
-     labs(title="Cases per Age Group",
+     labs(title="New Cases per Age Group",
           x="Date",
           y="Cases",
           caption="Data: https://info.gesundheitsministerium.at" ) +
