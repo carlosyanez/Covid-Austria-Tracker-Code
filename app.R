@@ -15,6 +15,7 @@ library(ggthemes)
 
 # Shiny UI's function
 ui <- fluidPage(theme = "bootstrap.css",
+                tags$head(includeHTML(("google_analytics.html"))),
                 
                 # App title ----
                 fluidRow(
@@ -24,7 +25,9 @@ ui <- fluidPage(theme = "bootstrap.css",
                 fluidRow(plotly::plotlyOutput("daily_active_plot")),
                 fluidRow(plotly::plotlyOutput("daily_new_plot")),
                 fluidRow(plotly::plotlyOutput("daily_age_plot")),
-                fluidRow(plotly::plotlyOutput("daily_positive_plot"))
+                fluidRow(plotly::plotlyOutput("daily_positive_plot")),
+                fluidRow(plotly::plotlyOutput("daily_testing_plot"))
+                
                 
                 )
                 
@@ -139,6 +142,27 @@ server <- function(input, output) {
            legend.text=element_text(size=8))+
      scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE)) 
    
+   testing_plot <- retrieved_data$retrieved_data_general %>%
+     filter(Date!=min(Date)) %>%
+     select(Date,Tests=GesTestungen) %>%
+     ggplot(aes(x=Date,y=Tests)) + geom_bar(fill="#00b0f6", stat="identity") +
+     theme_economist_white() + 
+     labs(title="Daily Tests",
+          x="Date",
+          y="Tests done",
+          caption="Data: https://info.gesundheitsministerium.at" ) +
+     theme(legend.position = "bottom",
+           plot.title = element_text(size=14),
+           axis.title.x = element_text(size = 10),
+           axis.text.x = element_text(angle = 0, hjust = 1,size = 10),
+           axis.title.y = element_text(size = 10),
+           axis.text.y = element_text(size = 10),
+           strip.text.x = element_text(size = 12),
+           strip.text.y = element_text(size = 12, angle = 90),
+           legend.title=element_text(size=8),
+           legend.text=element_text(size=8)) +
+     scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE)) 
+   
    
     url <- a("Amtliches Dashboard COVID19 - Bundesministerium für Soziales, Gesundheit, Pflege und Konsumentenschutz",
              href="https://info.gesundheitsministerium.at/dashboard_Epidem.html?l=en")
@@ -170,6 +194,10 @@ server <- function(input, output) {
     
     output$daily_age_plot <- plotly::renderPlotly({
       ggplotly(age_plot)
+    })
+    
+    output$daily_testing_plot <- plotly::renderPlotly({
+      ggplotly(testing_plot)
     })
 }
 
