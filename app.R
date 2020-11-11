@@ -72,9 +72,12 @@ server <- function(input, output,session) {
     rds_file <- "retrieved_data.rds"
     rds_url <- "https://github.com/carlosyanez/covid_austria_tracker/raw/master/retrieved_data.rds"
   
-    download.file(rds_url,rds_file)
+   
+    # download.file(rds_url,rds_file)
   
    retrieved_data <- readRDS(rds_file)
+   colour_scale <- unique(retrieved_data$retrieved_data %>% select(State,state_colour))
+   
    source("plotting_functions.R") 
    
     url <- a("AGES COVID19 Dashboard",
@@ -86,13 +89,13 @@ server <- function(input, output,session) {
    results$filter_value <- filter_value
    data_to_plot <- retrieved_data$retrieved_data
    
-   results$new_plot <- new_cases_plot(data_to_plot,filter_value)
-   results$active_plot <- active_cases_plot(data_to_plot,filter_value)    
-   results$testing_plot <- testing_results_plot(data_to_plot,filter_value)
-   results$positive_plot0 <- pos_plot00(data_to_plot,filter_value)    
-   results$positive_plot1 <- pos_plot01(data_to_plot)  
-   results$hospital_plot0 <- load_plot00(data_to_plot,filter_value) 
-   results$hospital_plot1 <- load_plot01(data_to_plot)    
+   results$new_plot <- new_cases_plot(data_to_plot,filter_value,colour_scale)
+   results$active_plot <- active_cases_plot(data_to_plot,filter_value,colour_scale)    
+   results$testing_plot <- testing_results_plot(data_to_plot,filter_value,colour_scale)
+   results$positive_plot0 <- pos_plot00(data_to_plot,filter_value,colour_scale)    
+   results$positive_plot1 <- pos_plot01(data_to_plot,colour_scale)  
+   results$hospital_plot0 <- load_plot00(data_to_plot,filter_value,colour_scale) 
+   results$hospital_plot1 <- load_plot01(data_to_plot,colour_scale)    
    
    message("Initial Load")
    
@@ -103,7 +106,7 @@ server <- function(input, output,session) {
                           min =  min(data_to_plot$Date),
                           max = max(data_to_plot$Date))
  
-   updateSelectizeInput(session, 'state', choices = unique(data_to_plot$Bundesland), server = TRUE)
+   updateSelectizeInput(session, 'state', choices = unique(data_to_plot$State), server = TRUE)
    
    observeEvent(input$state,
                 {
@@ -116,13 +119,13 @@ server <- function(input, output,session) {
                   data_to_plot <- retrieved_data$retrieved_data  %>% filter(Date>=start_date & Date<=end_date)
                   }
                   
-                  results$new_plot <- new_cases_plot(data_to_plot,filter_value)
-                  results$active_plot <- active_cases_plot(data_to_plot,filter_value)    
-                  results$testing_plot <- testing_results_plot(data_to_plot,filter_value)
-                  results$positive_plot0 <- pos_plot00(data_to_plot,filter_value)    
-                  results$positive_plot1 <- pos_plot01(data_to_plot)  
-                  results$hospital_plot0 <- load_plot00(data_to_plot,filter_value) 
-                  results$hospital_plot1 <- load_plot01(data_to_plot)    
+                  results$new_plot <- new_cases_plot(data_to_plot,filter_value,colour_scale)
+                  results$active_plot <- active_cases_plot(data_to_plot,filter_value,colour_scale)    
+                  results$testing_plot <- testing_results_plot(data_to_plot,filter_value,colour_scale)
+                  results$positive_plot0 <- pos_plot00(data_to_plot,filter_value,colour_scale)    
+                  results$positive_plot1 <- pos_plot01(data_to_plot,colour_scale)  
+                  results$hospital_plot0 <- load_plot00(data_to_plot,filter_value,colour_scale) 
+                  results$hospital_plot1 <- load_plot01(data_to_plot,colour_scale)    
                   
                 })
    
@@ -137,13 +140,13 @@ server <- function(input, output,session) {
                     data_to_plot <- retrieved_data$retrieved_data  %>% filter(Date>=start_date & Date<=end_date)
                   }
                   
-                  results$new_plot <- new_cases_plot(data_to_plot,filter_value)
-                  results$active_plot <- active_cases_plot(data_to_plot,filter_value)    
-                  results$testing_plot <- testing_results_plot(data_to_plot,filter_value)
-                  results$positive_plot0 <- pos_plot00(data_to_plot,filter_value)    
-                  results$positive_plot1 <- pos_plot01(data_to_plot)  
-                  results$hospital_plot0 <- load_plot00(data_to_plot,filter_value) 
-                  results$hospital_plot1 <- load_plot01(data_to_plot)    
+                  results$new_plot <- new_cases_plot(data_to_plot,filter_value,colour_scale)
+                  results$active_plot <- active_cases_plot(data_to_plot,filter_value,colour_scale)    
+                  results$testing_plot <- testing_results_plot(data_to_plot,filter_value,colour_scale)
+                  results$positive_plot0 <- pos_plot00(data_to_plot,filter_value,colour_scale)    
+                  results$positive_plot1 <- pos_plot01(data_to_plot,colour_scale)  
+                  results$hospital_plot0 <- load_plot00(data_to_plot,filter_value,colour_scale) 
+                  results$hospital_plot1 <- load_plot01(data_to_plot,colour_scale)    
                   
                 })
     

@@ -12,3 +12,5 @@ rsconnect/shinyapps.io/carlosyanezs/Covid-Austria-Tracker-Code.dcf
 google_analytics.html
 retrieved_data.rds
 temp
+*.csv
+*.zip

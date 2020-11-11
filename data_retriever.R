@@ -8,9 +8,9 @@ library(forcats)
 library(magrittr)
 library(lubridate)
 
-#setwd("/opt/shinyserver/apps/covid_vienna")
-#file_path<-"/opt/shinyserver/apps/covid_vienna/"
-file_path <-"./"
+setwd("/opt/shinyserver/apps/covid_vienna")
+file_path<-"/opt/shinyserver/apps/covid_vienna/"
+#file_path <-"./"
 
 extract_filename <- c("CovidFaelle_Timeline",
                       "CovidFallzahlen",
@@ -18,21 +18,24 @@ extract_filename <- c("CovidFaelle_Timeline",
                       "Version"
                       )
 
-state_translation <- tribble(~Bundesland,~State,
-                             "Österreich","Austria",
-                             "Austria","Austria",
-                             "Burgenland","Burgenland",
-                             "Kärnten","Carinthia",
-                             "Niederösterreich","Lower Austria",
-                             "Oberösterreich","Upper Austria",
-                             "Salzburg","Salzburg",
-                             "Steiermark","Styria",
-                             "Tirol","Tyrol",
-                             "Vorarlberg","Vorarlberg",
-                             "Wien","Vienna")
+#brewer.pal(11,"RdYlBu")
+state_translation <- tribble(~Bundesland,~State,~state_colour,
+                             "Österreich","Austria","#313695",
+                             "Austria","Austria","#313695",
+                             "Burgenland","Burgenland","#A50026",
+                             "Kärnten","Carinthia","#D73027",
+                             "Niederösterreich","Lower Austria","#F46D43",
+                             "Oberösterreich","Upper Austria","#FDAE61",
+                             "Salzburg","Salzburg","#FEE090",
+                             "Steiermark","Styria","#FFFFBF",
+                             "Tirol","Tyrol", "#E0F3F8",
+                             "Vorarlberg","Vorarlberg","#ABD9E9",
+                             "Wien","Vienna","#74ADD1" )
 
-# temp <- "/opt/shinyserver/apps/covid_vienna/data.zip"
-temp <- "./data.zip"
+     
+
+ temp <- "/opt/shinyserver/apps/covid_vienna/data.zip"
+#temp <- "./data.zip"
 download.file("https://covid19-dashboard.ages.at/data/data.zip",temp)
 message("0")
 unzip(temp,paste(extract_filename,".csv",sep=""),exdir=file_path)
@@ -40,12 +43,11 @@ message("0")
 message("0")
 file.rename(temp,
             paste("./data","_",Sys.Date(),".zip",sep=""))
-message("0")
+
 #  unlink(temp)
 rm(extract_filename)
 
 
-message("1")
 a <- as_tibble(read.csv2("CovidFaelle_Timeline.csv",stringsAsFactors=FALSE))
 
 a <- a %>% select(-AnzEinwohner,-BundeslandID) %>%
@@ -82,7 +84,7 @@ a <- a  %>% left_join(c,by=c("Date","Bundesland")) %>%
         Hospital_Load=100*(FZHosp)/(FZHosp+FZHospFree),
         ICU_Load=100*(FZICU)/(FZICU+FZICUFree)) %>%
   left_join(state_translation,by="Bundesland")%>%
-  mutate(Bundesland=State) %>% select(-State)
+   select(-Bundesland)
 
 a<- a%>% replace(is.na(.) , 0)
 
