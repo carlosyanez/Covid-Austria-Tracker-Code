@@ -1,6 +1,6 @@
 
 
-plot_formatter <- function(plot_var,plot_title,xlabel,ylabel,plot_caption,cscale){
+plot_formatter <- function(plot_var,plot_title,xlabel,ylabel,plot_caption,cscale,type=1,scale_title="State"){
   
   plot_var <- plot_var +
              theme_economist_white() + 
@@ -18,9 +18,16 @@ plot_formatter <- function(plot_var,plot_title,xlabel,ylabel,plot_caption,cscale
           strip.text.y = element_text(size = 12, angle = 90),
           legend.title=element_text(size=8),
           legend.text=element_text(size=8))+
-    scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE)) +
-    scale_fill_manual(labels = cscale$State , values = cscale$state_colour ) +
-    scale_colour_manual(labels = cscale$State , values = cscale$state_colour ) 
+    scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE)) 
+
+    if(type==1){
+    plot_var <- plot_var + scale_fill_manual(scale_title, values = c(cscale$state_colour) )
+  }
+  if(type==2){
+    plot_var <- plot_var +  scale_colour_manual(scale_title, values = c(cscale$state_colour) ) 
+ #   plot_var <- plot_var + scale_fill_manual(scale_title, values = c(cscale$state_colour) )
+    
+  }
   
     plot_var
 }
@@ -28,23 +35,30 @@ plot_formatter <- function(plot_var,plot_title,xlabel,ylabel,plot_caption,cscale
 
 new_cases_plot <- function(retrieved_data,filter_value,colour_scale){
   
+  retrieved_data<- retrieved_data %>% 
+    mutate(label=paste('</br></br>State: ', State,
+                       '</br>Date: ', Date,
+                       '</br>New Cases: ', format(AnzahlFaelle,big.mark=" ",digits=2)))
+  
   if(filter_value=="Austria"){
     data1 <- (retrieved_data %>% filter(!(State %in% c("Austria"))))
     data2 <- (retrieved_data %>% filter(State %in% c("Austria")))
   }else{
     data1 <- (retrieved_data %>% filter((State==filter_value)))
-    data2 <- data1 %>% mutate(AnzahlFaelle=0)
+    
+    data2 <- data1 %>% mutate(AnzahlFaelle=0) 
     colour_scale <- colour_scale %>% filter(State==filter_value)
     
   }
   
+
   new_plot <-  ggplot(data=data1,
-                      aes(x=Date,y=AnzahlFaelle,fill=State)) +
+                      aes(x=Date,y=AnzahlFaelle,fill=State,label=label)) +
     geom_bar(stat="identity") 
   
    if(nrow(data2)!=0 & filter_value == "Austria"){
     new_plot <- new_plot + geom_line(data=data2,
-                                     aes(x=Date, y=AnzahlFaelle), colour="blue")
+                                     aes(x=Date, y=AnzahlFaelle,label=label))
     }  
   
 
@@ -60,6 +74,10 @@ new_cases_plot <- function(retrieved_data,filter_value,colour_scale){
 
 active_cases_plot <- function(retrieved_data,filter_value,colour_scale){
   
+  retrieved_data<- retrieved_data %>% 
+    mutate(label=paste('</br></br>State: ', State,
+                       '</br>Date: ', Date,
+                       '</br>New Cases: ', format(Active,big.mark=" ",digits=2)))
   
   if(filter_value=="Austria"){
     data1 <- (retrieved_data %>% filter(!(State %in% c("Austria"))))
@@ -72,14 +90,14 @@ active_cases_plot <- function(retrieved_data,filter_value,colour_scale){
   
   
   active_plot <-  ggplot(data=data1,
-                         aes(x=Date,y=Active,fill=State)) +
+                      aes(x=Date,y=Active,fill=State,label=label)) +
     geom_bar(stat="identity") 
-  
   
   if(nrow(data2)!=0 & filter_value == "Austria"){
     active_plot <- active_plot + geom_line(data=data2,
-                                     aes(x=Date, y=Active, colour=State))
+                                     aes(x=Date, y=Active,label=label))
   }  
+  
   
   active_plot <- plot_formatter(active_plot,
                                 paste("Active Cases in",filter_value),
@@ -93,6 +111,11 @@ active_cases_plot <- function(retrieved_data,filter_value,colour_scale){
 
 testing_results_plot <- function(retrieved_data,filter_value,colour_scale){
   
+  retrieved_data<- retrieved_data %>% 
+    mutate(label=paste('</br></br>State: ', State,
+                       '</br>Date: ', Date,
+                       '</br>Tests: ', format(TestGesamt,big.mark=" ",digits=2)))
+  
   
   if(filter_value=="Austria"){
     data1 <- (retrieved_data %>% filter(!(State %in% c("Austria"))))
@@ -103,14 +126,16 @@ testing_results_plot <- function(retrieved_data,filter_value,colour_scale){
     colour_scale <- colour_scale %>% filter(State==filter_value)
   }
   
-  testing_plot <-  ggplot(data=data1,aes(x=Date,y=TestGesamt,fill=State)) +
-    geom_bar(stat="identity")
-  
+  testing_plot <-  ggplot(data=data1,
+                         aes(x=Date,y=TestGesamt,fill=State,label=label)) +
+    geom_bar(stat="identity") 
   
   if(nrow(data2)!=0 & filter_value == "Austria"){
-    testing_plot <- testing_plot + geom_line(data=data2,aes(x=Date, y=TestGesamt), colour="blue")
-  }   
+    testing_plot <- testing_plot + geom_line(data=data2,
+                                           aes(x=Date, y=TestGesamt,label=label))
+  }  
   
+
 
   testing_plot <- plot_formatter(testing_plot,
                                 paste("Daily Testing in",filter_value),
@@ -123,12 +148,19 @@ testing_results_plot <- function(retrieved_data,filter_value,colour_scale){
 }
 
 pos_plot00 <- function(retrieved_data,filter_value,colour_scale){
+  
+  
+  retrieved_data<- retrieved_data %>% 
+    mutate(label=paste('</br></br>State: ', State,
+                       '</br>Date: ', Date,
+                       '</br>Positivity Perc: ', paste(format(Positivity,big.mark=" ",digits=2),"%") ))
+                       
 
   if(filter_value=="") filter_value <-"Austria"
   
   positive_plot0 <- retrieved_data %>%
     filter(State==filter_value) %>%
-    ggplot(aes(x=Date,y=Positivity,color=State)) + geom_line() +
+    ggplot(aes(x=Date,y=Positivity,colour=State,label=label)) + geom_line() +
     geom_point() 
   
   colour_scale <- colour_scale %>% filter(State==filter_value)
@@ -139,15 +171,20 @@ pos_plot00 <- function(retrieved_data,filter_value,colour_scale){
                                  "Date",
                                  "Positivity Rate (%)",
                                  "Data: https://covid19-dashboard.ages.at/",
-                                 colour_scale)
+                                 colour_scale,type=2)
   positive_plot0
   
 }
 pos_plot01 <- function(retrieved_data,colour_scale){
   
+  retrieved_data<- retrieved_data %>% 
+    mutate(label=paste('</br></br>State: ', State,
+                       '</br>Date: ', Date,
+                       '</br>Positivity Perc: ', paste(format(Positivity,big.mark=" ",digits=2),"%") ))
+  
   positive_plot1 <- retrieved_data %>%
     filter(State!="Austria") %>%
-    ggplot(aes(x=Date,y=Positivity,color=State)) + geom_line() +
+    ggplot(aes(x=Date,y=Positivity,color=State,label=label)) + geom_line() +
     geom_point() 
   
   positive_plot1 <- plot_formatter(positive_plot1,
@@ -155,7 +192,7 @@ pos_plot01 <- function(retrieved_data,colour_scale){
                                    "Date",
                                    "Positivity Rate (%)",
                                    "Data: https://covid19-dashboard.ages.at/",
-                                   colour_scale) +
+                                   colour_scale,type=2) +
                        facet_wrap(State ~.)
   
   positive_plot1
@@ -165,28 +202,19 @@ pos_plot01 <- function(retrieved_data,colour_scale){
 
 load_plot00 <- function(retrieved_data,filter_value,colour_scale){
   
-  if(filter_value!=""){
-    retrieved_data <- retrieved_data %>%
-    filter(State==filter_value)
-    
-    
-  }else{
-    retrieved_data <- retrieved_data %>%
-      filter(State=="Austria")
+  if(filter_value==""){
     filter_value<-"Austria"
-    colour_scale <- colour_scale %>% filter(State==filter_value) %>% mutate(State="Hospital_Load")
-    }
+  }
   
- 
+  retrieved_data<- retrieved_data %>% filter(State==filter_value) %>%
+    select(Date,Hospital_Load,ICU_Load,FZHosp,FZICU,FZHospFree,FZICUFree) %>%
+    pivot_longer(c(-Date,-FZHosp,-FZICU,-FZHospFree,-FZICUFree),values_to="load_value",names_to="Type") %>% 
+    mutate(label=paste('</br></br>Date: ', Date,
+                       '</br>Load Perc: ', paste(format(load_value,big.mark=" ",digits=2),"%") ))
   
-  ICU_Load <- tribble(~State,~state_colour,
-                      "ICU_Load","purple")
-  
-  colour_scale <- rbind(colour_scale,ICU_Load)
-  
-  load_plot0 <- retrieved_data %>% select(Date,Hospital_Load,ICU_Load,FZHosp,FZICU) %>%
-    pivot_longer(c(-Date,-FZHosp,-FZICU),values_to="value",names_to="Type") %>%
-    ggplot(aes(x=Date,y=value,color=Type)) + geom_line() +
+
+  load_plot0 <- retrieved_data %>%  
+    ggplot(aes(x=Date,y=load_value,colour=Type,label=label)) + geom_line() +
     geom_point()
   
   load_plot0 <- plot_formatter(load_plot0,
@@ -194,7 +222,7 @@ load_plot00 <- function(retrieved_data,filter_value,colour_scale){
                                    "Date",
                                    "Load Percentage (%)",
                                    "Data: https://covid19-dashboard.ages.at/",
-                                   colour_scale) 
+                                   colour_scale,scale_title="Bed Type",type=2) 
    
   
  load_plot0
@@ -202,26 +230,26 @@ load_plot00 <- function(retrieved_data,filter_value,colour_scale){
 
 load_plot01 <- function(retrieved_data,colour_scale){
   
-  plotting_data <- retrieved_data %>%  select(Date,Hospital_Load,ICU_Load,FZHosp,FZICU,State) %>%
-    filter(State!="Austria") %>%
-    pivot_longer(c(-Date,-FZHosp,-FZICU,-State),values_to="value",names_to="Type") 
+  retrieved_data<- retrieved_data %>% 
+    select(State,Date,Hospital_Load,ICU_Load,FZHosp,FZICU,FZHospFree,FZICUFree) %>%
+    pivot_longer(c(-State,-Date,-FZHosp,-FZICU,-FZHospFree,-FZICUFree),values_to="load_value",names_to="Type") %>%
+  mutate(label=paste('</br></br>State: ', State,
+                     '</br>Date: ', Date,
+                     '</br></br>Type: ', Type,
+                     '</br>Load Perc: ', paste(format(load_value,big.mark=" ",digits=2),"%") ))
+  
  
-  load_plot1 <- plotting_data %>% ggplot(aes(x=Date,y=value,color=Type)) + geom_line() +
+ 
+  load_plot1 <- retrieved_data %>% ggplot(aes(x=Date,y=load_value,color=Type,label=label)) + geom_line() +
                 geom_point()
   
  
-
-  colour_scale <- tribble(~State,~state_colour,
-                          "Hospital_Load","blue",
-                          "ICU_Load","purple")
-  
-
   load_plot1 <- plot_formatter(load_plot1,
                                paste("Hospital Load per State"),
                                "Date",
                                "Load Percentage (%)",
                                "Data: https://covid19-dashboard.ages.at/",
-                               colour_scale)  +
+                               colour_scale,scale_title="Bed Type",type=2)  +
                 facet_wrap(State ~.)
   
   load_plot1

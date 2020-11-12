@@ -26,13 +26,14 @@ sidebar <-dashboardSidebar(
 
     uiOutput("source_link"),
     uiOutput("measurement_times"),
-    uiOutput("blank1"),
-    uiOutput("blank2"),
-    uiOutput("blank3"),
+#    uiOutput("blank1"),
+#    uiOutput("blank2"),
+#    uiOutput("blank3"),
     menuItem("Filters", icon = icon("filter"),
              
              selectizeInput('state', 'State', choices = "Loading..."),
-             dateRangeInput("date", "Dates", start = NULL,
+             selectizeInput('dates_pre', 'Predefined Dates', choices = "Loading..."),
+             dateRangeInput("date", "Free Dates Selection", start = NULL,
                             end =NULL, min = NULL,
                             max = NULL, format = "yyyy-mm-dd", startview = "month", weekstart = 0,
                             language = "en", separator = " to ", width = NULL)
@@ -72,8 +73,7 @@ server <- function(input, output,session) {
     rds_file <- "retrieved_data.rds"
     rds_url <- "https://github.com/carlosyanez/covid_austria_tracker/raw/master/retrieved_data.rds"
   
-   
-    # download.file(rds_url,rds_file)
+   download.file(rds_url,rds_file)
   
    retrieved_data <- readRDS(rds_file)
    colour_scale <- unique(retrieved_data$retrieved_data %>% select(State,state_colour))
@@ -85,19 +85,21 @@ server <- function(input, output,session) {
   
    results <- reactiveValues()  
    filter_value <-"Austria"
-    
+   
+   beds_colour_scale <- tribble(~Type,~state_colour,
+                                "Hospital_Load","blue",
+                                "ICU_Load","purple")
+   
+  predefined_dates <- c("No Filter",
+                        "Last 7 Days",
+                        "Last 4 Weeks",
+                        "Last 3 Months",
+                        "Last 6 Months")
+  
    results$filter_value <- filter_value
    data_to_plot <- retrieved_data$retrieved_data
    
-   results$new_plot <- new_cases_plot(data_to_plot,filter_value,colour_scale)
-   results$active_plot <- active_cases_plot(data_to_plot,filter_value,colour_scale)    
-   results$testing_plot <- testing_results_plot(data_to_plot,filter_value,colour_scale)
-   results$positive_plot0 <- pos_plot00(data_to_plot,filter_value,colour_scale)    
-   results$positive_plot1 <- pos_plot01(data_to_plot,colour_scale)  
-   results$hospital_plot0 <- load_plot00(data_to_plot,filter_value,colour_scale) 
-   results$hospital_plot1 <- load_plot01(data_to_plot,colour_scale)    
-   
-   message("Initial Load")
+    message("Initial Load")
    
  
    updateDateRangeInput(session, "date",
@@ -106,34 +108,50 @@ server <- function(input, output,session) {
                           min =  min(data_to_plot$Date),
                           max = max(data_to_plot$Date))
  
+   updateSelectizeInput(session, 'dates_pre', choices = predefined_dates, server = TRUE)
    updateSelectizeInput(session, 'state', choices = unique(data_to_plot$State), server = TRUE)
    
-   observeEvent(input$state,
+   
+   observeEvent(input$dates_pre,
                 {
+                if(length(input$dates_pre)>0){
                   filter_value <- input$state
-                  start_date <- input$date[[1]]
-                  end_date<- input$date[[2]]
-                  if(length(input$date)==0){
-                    data_to_plot <-   retrieved_data$retrieved_data
-                  }else{
+                  end_date <- max(retrieved_data$retrieved_data$Date)
+                  first_date <- min(retrieved_data$retrieved_data$Date)
+                  date_selector <- c(first_date,
+                                    end_date -ddays(6),
+                                    end_date - dweeks(4),
+                                    end_date - dmonths(4),
+                                    end_date - dmonths(6)
+                                    )
+                  
+                  start_date <- date_selector[which(input$dates_pre == predefined_dates)]
+                  
+                  if(length(as.character(start_date))==0){start_date <- first_date}
+
                   data_to_plot <- retrieved_data$retrieved_data  %>% filter(Date>=start_date & Date<=end_date)
-                  }
+                
                   
                   results$new_plot <- new_cases_plot(data_to_plot,filter_value,colour_scale)
                   results$active_plot <- active_cases_plot(data_to_plot,filter_value,colour_scale)    
                   results$testing_plot <- testing_results_plot(data_to_plot,filter_value,colour_scale)
                   results$positive_plot0 <- pos_plot00(data_to_plot,filter_value,colour_scale)    
                   results$positive_plot1 <- pos_plot01(data_to_plot,colour_scale)  
-                  results$hospital_plot0 <- load_plot00(data_to_plot,filter_value,colour_scale) 
-                  results$hospital_plot1 <- load_plot01(data_to_plot,colour_scale)    
+                  results$hospital_plot0 <- load_plot00(data_to_plot,filter_value,beds_colour_scale) 
+                  results$hospital_plot1 <- load_plot01(data_to_plot,beds_colour_scale)  
                   
+                }
                 })
    
-   observeEvent(input$date,
+   
+   
+   observeEvent(input$state,
                 {
                   filter_value <- input$state
                   start_date <- input$date[[1]]
                   end_date<- input$date[[2]]
+                  
+                  message(filter_value)
                   if(length(input$date)==0){
                     data_to_plot <-   retrieved_data$retrieved_data
                   }else{
@@ -145,8 +163,32 @@ server <- function(input, output,session) {
                   results$testing_plot <- testing_results_plot(data_to_plot,filter_value,colour_scale)
                   results$positive_plot0 <- pos_plot00(data_to_plot,filter_value,colour_scale)    
                   results$positive_plot1 <- pos_plot01(data_to_plot,colour_scale)  
-                  results$hospital_plot0 <- load_plot00(data_to_plot,filter_value,colour_scale) 
-                  results$hospital_plot1 <- load_plot01(data_to_plot,colour_scale)    
+                  results$hospital_plot0 <- load_plot00(data_to_plot,filter_value,beds_colour_scale) 
+                  results$hospital_plot1 <- load_plot01(data_to_plot,beds_colour_scale)                  
+                  
+                  
+                })
+   
+   observeEvent(input$date,
+                {
+                  filter_value <- input$state
+                  start_date <- input$date[[1]]
+                  end_date<- input$date[[2]]
+                
+                  if(length(input$date)==0){
+                    data_to_plot <-   retrieved_data$retrieved_data
+                  }else{
+                    data_to_plot <- retrieved_data$retrieved_data  %>% filter(Date>=start_date & Date<=end_date)
+                  }
+                  
+                  results$new_plot <- new_cases_plot(data_to_plot,filter_value,colour_scale)
+                  results$active_plot <- active_cases_plot(data_to_plot,filter_value,colour_scale)    
+                  results$testing_plot <- testing_results_plot(data_to_plot,filter_value,colour_scale)
+                  results$positive_plot0 <- pos_plot00(data_to_plot,filter_value,colour_scale)    
+                  results$positive_plot1 <- pos_plot01(data_to_plot,colour_scale)  
+                  results$hospital_plot0 <- load_plot00(data_to_plot,filter_value,beds_colour_scale) 
+                  results$hospital_plot1 <- load_plot01(data_to_plot,beds_colour_scale)                  
+                  
                   
                 })
     
@@ -171,31 +213,31 @@ server <- function(input, output,session) {
     
     # Plot
     output$daily_active_plot <- plotly::renderPlotly({
-        ggplotly(results$active_plot)
+        ggplotly(results$active_plot,tooltip = c("label", "colour"))
     })
     
     output$daily_new_plot <- plotly::renderPlotly({
-      ggplotly(results$new_plot)
+      ggplotly(results$new_plot,tooltip = c("label", "colour"))
     })
     
     output$daily_positive_plot0 <- plotly::renderPlotly({
-      ggplotly(results$positive_plot0)
+      ggplotly(results$positive_plot0,tooltip = c("label", "colour"))
     })
     
     output$daily_positive_plot1 <- plotly::renderPlotly({
-      ggplotly(results$positive_plot1)
+      ggplotly(results$positive_plot1,tooltip = c("label", "colour"))
     })
     
     output$daily_testing_plot <- plotly::renderPlotly({
-      ggplotly(results$testing_plot)
+      ggplotly(results$testing_plot,tooltip = c("label", "colour"))
     })
     
     output$daily_hospital_plot0 <- plotly::renderPlotly({
-      ggplotly(results$hospital_plot0)
+      ggplotly(results$hospital_plot0,tooltip = c("label", "colour"))
     })
     
     output$daily_hospital_plot1 <- plotly::renderPlotly({
-      ggplotly(results$hospital_plot1)
+      ggplotly(results$hospital_plot1,tooltip = c("label", "colour"))
     })
     
 }
