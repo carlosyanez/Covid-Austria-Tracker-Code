@@ -8,12 +8,13 @@ library(forcats)
 library(magrittr)
 library(lubridate)
 
-setwd("/opt/shinyserver/apps/covid_vienna")
-file_path<-"/opt/shinyserver/apps/covid_vienna/"
-#file_path <-"./"
+#setwd("/opt/shinyserver/apps/covid_vienna")
+#file_path<-"/opt/shinyserver/apps/covid_vienna/"
+file_path <-"./"
 
 extract_filename <- c("CovidFaelle_Timeline",
                       "CovidFallzahlen",
+                      "CovidFaelle_Timeline_GKZ",
                       "CovidFaelle_Altersgruppe",
                       "Version"
                       )
@@ -34,8 +35,8 @@ state_translation <- tribble(~Bundesland,~State,~state_colour,
 
      
 
- temp <- "/opt/shinyserver/apps/covid_vienna/data.zip"
-#temp <- "./data.zip"
+#temp <- "/opt/shinyserver/apps/covid_vienna/data.zip"
+temp <- "./data.zip"
 download.file("https://covid19-dashboard.ages.at/data/data.zip",temp)
 message("0")
 unzip(temp,paste(extract_filename,".csv",sep=""),exdir=file_path)
@@ -50,9 +51,13 @@ rm(extract_filename)
 
 a <- as_tibble(read.csv2("CovidFaelle_Timeline.csv",stringsAsFactors=FALSE))
 
+state_stats <- a %>% select(Bundesland,AnzEinwohner) %>% unique(.)
+
+state_stats <- state_translation %>% left_join(state_stats,by="Bundesland")
+
 a <- a %>% select(-AnzEinwohner,-BundeslandID) %>%
   mutate(Date=dmy(str_sub(Time,1,10)),
-         Bundesland=ifelse(Bundesland=="Österreich","Austria",Bundesland)) %>%
+         Bundesland=ifelse(Bundesland=="Österreich","Österreich",Bundesland)) %>%
   group_by(Date,Bundesland) %>%
   summarise(across(where(is.numeric), ~sum(.x, na.rm = TRUE))) %>%
   ungroup()
@@ -60,7 +65,7 @@ a <- a %>% select(-AnzEinwohner,-BundeslandID) %>%
 message("2")
 c <- as_tibble(read.csv2("CovidFallzahlen.csv",stringsAsFactors=FALSE)) %>%
   mutate(Date=dmy(Meldedat)) %>% 
-  mutate(Bundesland=ifelse(Bundesland=="Alle","Austria",Bundesland)) %>%
+  mutate(Bundesland=ifelse(Bundesland=="Alle","Österreich",Bundesland)) %>%
   select(-Meldedat,-MeldeDatum,-BundeslandID) 
 
 d <- c %>% select(Date,Bundesland,TestGesamt) %>%
@@ -77,19 +82,35 @@ d<- d %>% left_join (d %>% select(-previous_date),
 c <- c %>% mutate(TestGesamtSum=TestGesamt) %>%
      select(-TestGesamt) %>% left_join(d,by=c("Date","Bundesland"))
 
+
 a <- a  %>% left_join(c,by=c("Date","Bundesland")) %>%
  mutate(Positivity=ifelse(!is.na(TestGesamt) & TestGesamt>0,100*AnzahlFaelle/TestGesamt,0),
         Positivity=ifelse(Positivity>100,mean(Positivity),Positivity),
         Active = AnzahlFaelleSum-(AnzahlTotSum+AnzahlGeheiltSum),
         Hospital_Load=100*(FZHosp)/(FZHosp+FZHospFree),
         ICU_Load=100*(FZICU)/(FZICU+FZICUFree)) %>%
-  left_join(state_translation,by="Bundesland")%>%
+  left_join(state_stats,by="Bundesland")%>%
    select(-Bundesland)
 
 a<- a%>% replace(is.na(.) , 0)
 
+sevendays1 <- a %>% select(State,Date,Active7=Active) %>% mutate(Date=Date+ddays(7))
+
+a<- a %>% left_join(sevendays1 , by=c("State","Date")) %>%
+  mutate(sevenday_net=Active-Active7) %>%
+  mutate(sevenday_netpc = 10^5*sevenday_net/AnzEinwohner,
+             sevenday_newpc = 10^5*AnzahlFaelle7Tage/AnzEinwohner)
 
 e <- as_tibble(read.csv2("Version.csv",stringsAsFactors=FALSE))
+
+f <- as_tibble(read.csv2("CovidFaelle_GKZ.csv",stringsAsFactors=FALSE))
+f <- f %>% mutate(incpc=10^5*AnzahlFaelle7Tage/AnzEinwohner) %>% arrange(-incpc) %>%
+  mutate(ranking=row_number())
+
+#bezirke <- readRDS("geoboundaries.bezirke.rds")
+
+#library(geojsonio)
+#shapes<-geojson_read(paste(file_path,"bezirken.json"))
 
 
 covid_austria <-vector(mode = "list", length = 0)
