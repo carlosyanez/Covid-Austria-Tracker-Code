@@ -175,15 +175,15 @@ pos_plot00 <- function(retrieved_data,filter_value,colour_scale){
   positive_plot0
   
 }
-pos_plot01 <- function(retrieved_data,colour_scale){
+pos_plot01 <- function(retrieved_data,filter_value,colour_scale){
   
   retrieved_data<- retrieved_data %>% 
+    filter(State!=filter_value) %>%
     mutate(label=paste('</br></br>State: ', State,
                        '</br>Date: ', Date,
                        '</br>Positivity Perc: ', paste(format(Positivity,big.mark=" ",digits=2),"%") ))
   
   positive_plot1 <- retrieved_data %>%
-    filter(State!="Austria") %>%
     ggplot(aes(x=Date,y=Positivity,color=State,label=label)) + geom_line() +
     geom_point() 
   
@@ -193,7 +193,9 @@ pos_plot01 <- function(retrieved_data,colour_scale){
                                    "Positivity Rate (%)",
                                    "Data: https://covid19-dashboard.ages.at/",
                                    colour_scale,type=2) +
-                       facet_wrap(State ~.)
+    theme(axis.text.x = element_text(size = 8),
+          axis.title.x =element_blank()) +
+                       facet_wrap(State ~.) 
   
   positive_plot1
   
@@ -228,9 +230,10 @@ load_plot00 <- function(retrieved_data,filter_value,colour_scale){
  load_plot0
 }
 
-load_plot01 <- function(retrieved_data,colour_scale){
+load_plot01 <- function(retrieved_data,filter_value,colour_scale){
   
   retrieved_data<- retrieved_data %>% 
+    filter(State!=filter_value) %>%
     select(State,Date,Hospital_Load,ICU_Load,FZHosp,FZICU,FZHospFree,FZICUFree) %>%
     pivot_longer(c(-State,-Date,-FZHosp,-FZICU,-FZHospFree,-FZICUFree),values_to="load_value",names_to="Type") %>%
   mutate(label=paste('</br></br>State: ', State,
@@ -250,6 +253,8 @@ load_plot01 <- function(retrieved_data,colour_scale){
                                "Load Percentage (%)",
                                "Data: https://covid19-dashboard.ages.at/",
                                colour_scale,scale_title="Bed Type",type=2)  +
+    theme(axis.text.x = element_text(size = 8),
+          axis.title.x =element_blank()) +
                 facet_wrap(State ~.)
   
   load_plot1

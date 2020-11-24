@@ -136,9 +136,9 @@ server <- function(input, output,session) {
                   results$active_plot <- active_cases_plot(data_to_plot,filter_value,colour_scale)    
                   results$testing_plot <- testing_results_plot(data_to_plot,filter_value,colour_scale)
                   results$positive_plot0 <- pos_plot00(data_to_plot,filter_value,colour_scale)    
-                  results$positive_plot1 <- pos_plot01(data_to_plot,colour_scale)  
+                  results$positive_plot1 <- pos_plot01(data_to_plot,filter_value,colour_scale)  
                   results$hospital_plot0 <- load_plot00(data_to_plot,filter_value,beds_colour_scale) 
-                  results$hospital_plot1 <- load_plot01(data_to_plot,beds_colour_scale)  
+                  results$hospital_plot1 <- load_plot01(data_to_plot,filter_value,beds_colour_scale)  
                   
                 }
                 })
@@ -162,9 +162,9 @@ server <- function(input, output,session) {
                   results$active_plot <- active_cases_plot(data_to_plot,filter_value,colour_scale)    
                   results$testing_plot <- testing_results_plot(data_to_plot,filter_value,colour_scale)
                   results$positive_plot0 <- pos_plot00(data_to_plot,filter_value,colour_scale)    
-                  results$positive_plot1 <- pos_plot01(data_to_plot,colour_scale)  
+                  results$positive_plot1 <- pos_plot01(data_to_plot,filter_value,colour_scale)  
                   results$hospital_plot0 <- load_plot00(data_to_plot,filter_value,beds_colour_scale) 
-                  results$hospital_plot1 <- load_plot01(data_to_plot,beds_colour_scale)                  
+                  results$hospital_plot1 <- load_plot01(data_to_plot,filter_value,beds_colour_scale)                  
                   
                   
                 })
@@ -185,9 +185,9 @@ server <- function(input, output,session) {
                   results$active_plot <- active_cases_plot(data_to_plot,filter_value,colour_scale)    
                   results$testing_plot <- testing_results_plot(data_to_plot,filter_value,colour_scale)
                   results$positive_plot0 <- pos_plot00(data_to_plot,filter_value,colour_scale)    
-                  results$positive_plot1 <- pos_plot01(data_to_plot,colour_scale)  
+                  results$positive_plot1 <- pos_plot01(data_to_plot,filter_value,colour_scale)  
                   results$hospital_plot0 <- load_plot00(data_to_plot,filter_value,beds_colour_scale) 
-                  results$hospital_plot1 <- load_plot01(data_to_plot,beds_colour_scale)                  
+                  results$hospital_plot1 <- load_plot01(data_to_plot,filter_value,beds_colour_scale)                  
                   
                   
                 })
