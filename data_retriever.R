@@ -16,8 +16,10 @@ extract_filename <- c("CovidFaelle_Timeline",
                       "CovidFallzahlen",
                       "CovidFaelle_Timeline_GKZ",
                       "CovidFaelle_Altersgruppe",
-                      "Version"
+                      "CovidFaelleDelta"
                       )
+
+
 
 #brewer.pal(11,"RdYlBu")
 state_translation <- tribble(~Bundesland,~State,~state_colour,
@@ -38,24 +40,23 @@ state_translation <- tribble(~Bundesland,~State,~state_colour,
 #temp <- "/opt/shinyserver/apps/covid_vienna/data.zip"
 temp <- "./data.zip"
 download.file("https://covid19-dashboard.ages.at/data/data.zip",temp)
-message("0")
 unzip(temp,paste(extract_filename,".csv",sep=""),exdir=file_path)
-message("0")
-message("0")
 file.rename(temp,
             paste("./data","_",Sys.Date(),".zip",sep=""))
 
-#  unlink(temp)
-rm(extract_filename)
+data <-list()
 
+for(i in 1:length(extract_filename)){
+  
+  data[[i]] <- as_tibble(read.csv2(paste(extract_filename[i],".csv",sep=""),stringsAsFactors=FALSE))
+}
+names(data) <- extract_filename
 
-a <- as_tibble(read.csv2("CovidFaelle_Timeline.csv",stringsAsFactors=FALSE))
-
-state_stats <- a %>% select(Bundesland,AnzEinwohner) %>% unique(.)
+state_stats <- data$CovidFaelle_Timeline %>% select(Bundesland,AnzEinwohner) %>% unique(.)
 
 state_stats <- state_translation %>% left_join(state_stats,by="Bundesland")
 
-a <- a %>% select(-AnzEinwohner,-BundeslandID) %>%
+a <- data$CovidFaelle_Timeline %>% select(-AnzEinwohner,-BundeslandID) %>%
   mutate(Date=dmy(str_sub(Time,1,10)),
          Bundesland=ifelse(Bundesland=="Österreich","Österreich",Bundesland)) %>%
   group_by(Date,Bundesland) %>%
@@ -63,7 +64,7 @@ a <- a %>% select(-AnzEinwohner,-BundeslandID) %>%
   ungroup()
 
 message("2")
-c <- as_tibble(read.csv2("CovidFallzahlen.csv",stringsAsFactors=FALSE)) %>%
+c <- data$CovidFallzahlen %>%
   mutate(Date=dmy(Meldedat)) %>% 
   mutate(Bundesland=ifelse(Bundesland=="Alle","Österreich",Bundesland)) %>%
   select(-Meldedat,-MeldeDatum,-BundeslandID) 
@@ -101,16 +102,6 @@ a<- a %>% left_join(sevendays1 , by=c("State","Date")) %>%
   mutate(sevenday_netpc = 10^5*sevenday_net/AnzEinwohner,
              sevenday_newpc = 10^5*AnzahlFaelle7Tage/AnzEinwohner)
 
-e <- as_tibble(read.csv2("Version.csv",stringsAsFactors=FALSE))
-
-f <- as_tibble(read.csv2("CovidFaelle_GKZ.csv",stringsAsFactors=FALSE))
-f <- f %>% mutate(incpc=10^5*AnzahlFaelle7Tage/AnzEinwohner) %>% arrange(-incpc) %>%
-  mutate(ranking=row_number())
-
-#bezirke <- readRDS("geoboundaries.bezirke.rds")
-
-#library(geojsonio)
-#shapes<-geojson_read(paste(file_path,"bezirken.json"))
 
 
 covid_austria <-vector(mode = "list", length = 0)
