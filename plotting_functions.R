@@ -52,12 +52,12 @@ new_cases_plot <- function(retrieved_data,filter_value,colour_scale){
   }
   
 
-  new_plot <-  ggplot(data=data1,
-                      aes(x=Date,y=AnzahlFaelle,fill=State,label=label)) +
-    geom_bar(stat="identity") 
+  new_plot <- data1 %>% select(Date,AnzahlFaelle,State,label) %>%
+              ggplot(aes(x=Date,y=AnzahlFaelle,fill=State,label=label)) +
+              geom_bar(stat="identity") 
   
    if(nrow(data2)!=0 & filter_value == "Austria"){
-    new_plot <- new_plot + geom_line(data=data2,
+    new_plot <- new_plot + geom_line(data=(data2%>% select(Date,AnzahlFaelle,State,label)),
                                      aes(x=Date, y=AnzahlFaelle,label=label))
     }  
   
@@ -89,12 +89,12 @@ active_cases_plot <- function(retrieved_data,filter_value,colour_scale){
   }
   
   
-  active_plot <-  ggplot(data=data1,
+  active_plot <-  ggplot(data=data1 %>% select(Date,Active,State,label),
                       aes(x=Date,y=Active,fill=State,label=label)) +
     geom_bar(stat="identity") 
   
   if(nrow(data2)!=0 & filter_value == "Austria"){
-    active_plot <- active_plot + geom_line(data=data2,
+    active_plot <- active_plot + geom_line(data=data2 %>% select(Date,Active,State,label),
                                      aes(x=Date, y=Active,label=label))
   }  
   
@@ -126,12 +126,12 @@ testing_results_plot <- function(retrieved_data,filter_value,colour_scale){
     colour_scale <- colour_scale %>% filter(State==filter_value)
   }
   
-  testing_plot <-  ggplot(data=data1,
+  testing_plot <-  ggplot(data=data1 %>% select(Date,TestGesamt,State,label),
                          aes(x=Date,y=TestGesamt,fill=State,label=label)) +
     geom_bar(stat="identity") 
   
   if(nrow(data2)!=0 & filter_value == "Austria"){
-    testing_plot <- testing_plot + geom_line(data=data2,
+    testing_plot <- testing_plot + geom_line(data=data2 %>% select(Date,TestGesamt,State,label),
                                            aes(x=Date, y=TestGesamt,label=label))
   }  
   
@@ -158,7 +158,7 @@ pos_plot00 <- function(retrieved_data,filter_value,colour_scale){
 
   if(filter_value=="") filter_value <-"Austria"
   
-  positive_plot0 <- retrieved_data %>%
+  positive_plot0 <- retrieved_data %>% select(Date,Positivity,State,label) %>%
     filter(State==filter_value) %>%
     ggplot(aes(x=Date,y=Positivity,colour=State,label=label)) + geom_line() +
     geom_point() 
@@ -183,7 +183,7 @@ pos_plot01 <- function(retrieved_data,filter_value,colour_scale){
                        '</br>Date: ', Date,
                        '</br>Positivity Perc: ', paste(format(Positivity,big.mark=" ",digits=2),"%") ))
   
-  positive_plot1 <- retrieved_data %>%
+  positive_plot1 <- retrieved_data %>% select(Date,Positivity,State,label) %>%
     ggplot(aes(x=Date,y=Positivity,color=State,label=label)) + geom_line() +
     geom_point() 
   
