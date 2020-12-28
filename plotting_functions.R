@@ -229,7 +229,6 @@ load_plot00 <- function(retrieved_data,filter_value,colour_scale){
   
  load_plot0
 }
-
 load_plot01 <- function(retrieved_data,filter_value,colour_scale){
   
   retrieved_data<- retrieved_data %>% 
@@ -260,3 +259,57 @@ load_plot01 <- function(retrieved_data,filter_value,colour_scale){
   load_plot1
 }
 
+sevenday_plot00 <- function(retrieved_data,filter_value,colour_scale){
+  
+  
+  retrieved_data<- retrieved_data %>% 
+    mutate(label=paste('</br></br>State: ', State,
+                       '</br>Date: ', Date,
+                       '</br>Seven Day Incidencec: ', paste(format(SiebenTageInzidenzFaelle,big.mark=" ",digits=2)) ))
+  
+  
+  if(filter_value=="") filter_value <-"Austria"
+  
+  sevenday_plot0 <- retrieved_data %>% select(Date,SiebenTageInzidenzFaelle,State,label) %>%
+    filter(State==filter_value) %>%
+    ggplot(aes(x=Date,y=SiebenTageInzidenzFaelle,colour=State,label=label)) + geom_line() +
+    geom_point() 
+  
+  colour_scale <- colour_scale %>% filter(State==filter_value)
+  
+  
+  sevenday_plot0 <- plot_formatter(sevenday_plot0,
+                                   paste("Seven Day Incidence in ",filter_value),
+                                   "Date",
+                                   "Seven Day Incidence",
+                                   "Data: https://covid19-dashboard.ages.at/",
+                                   colour_scale,type=2)
+  sevenday_plot0
+  
+}
+sevenday_plot01 <- function(retrieved_data,filter_value,colour_scale){
+  
+  retrieved_data<- retrieved_data %>% 
+    filter(State!=filter_value) %>%
+    mutate(label=paste('</br></br>State: ', State,
+                       '</br>Date: ', Date,
+                       '</br>Seven Day Incidencec: ', paste(format(SiebenTageInzidenzFaelle,big.mark=" ",digits=2)) ))
+  
+  sevenday_plot1 <- retrieved_data %>% select(Date,SiebenTageInzidenzFaelle,State,label) %>%
+    ggplot(aes(x=Date,y=SiebenTageInzidenzFaelle,color=State,label=label)) + geom_line() +
+    geom_point() 
+  
+  sevenday_plot1 <- plot_formatter(sevenday_plot1,
+                                   paste("Seven Day Incidence per State ",filter_value),
+                                   "Date",
+                                   "Seven Day Incidence",
+                                   "Data: https://covid19-dashboard.ages.at/",
+                                   colour_scale,type=2) +
+    theme(axis.text.x = element_text(size = 8),
+          axis.title.x =element_blank()) +
+    facet_wrap(State ~.) 
+  
+  sevenday_plot1
+  
+  
+}
