@@ -8,10 +8,11 @@
 # Load required packages
 library(shinydashboard)
 library(tidyverse)
-library(plotly)
+library(ggiraph)
 library(lubridate)
 library(ggthemes)
 library(htmltools)
+library(showtext)
 
 
 # Shiny UI's function
@@ -25,6 +26,7 @@ sidebar <-dashboardSidebar(
   sidebarMenu(
 
     uiOutput("source_link"),
+    uiOutput("source_link2"),
     uiOutput("measurement_times"),
 #    uiOutput("blank1"),
 #    uiOutput("blank2"),
@@ -43,22 +45,32 @@ sidebar <-dashboardSidebar(
 
 
 body <-   dashboardBody(
-#ui <- fluidPage(theme = "bootstrap.css",
-#                tags$head(includeHTML(("google_analytics.html"))),
-                
                 # App title ----,
                 tags$head(includeHTML(("google_analytics.html"))),
-                fluidRow(plotly::plotlyOutput("daily_active_plot")),
-                fluidRow(plotly::plotlyOutput("daily_new_plot")),
-                fluidRow(plotly::plotlyOutput("daily_sevenday_plot0")),
-                fluidRow(plotly::plotlyOutput("daily_sevenday_plot1")),                
-                fluidRow(plotly::plotlyOutput("daily_positive_plot0")),
-                fluidRow(plotly::plotlyOutput("daily_positive_plot1")),
-                fluidRow(plotly::plotlyOutput("daily_testing_plot")),
-                fluidRow(plotly::plotlyOutput("daily_hospital_plot0")),
-                fluidRow(plotly::plotlyOutput("daily_hospital_plot1"))
-                               )
-
+                  tabBox(
+                    # The id lets us use input$tabset1 on the server to find the current tab
+                    id = "tabset1", width = "100%",
+                    tabPanel("New and Active", 
+                             girafeOutput("daily_active_plot",width="100%"),
+                             girafeOutput("daily_new_plot",width="100%")),
+                    tabPanel("7-Day Trend", 
+                             girafeOutput("daily_sevenday_plot0",width="100%"),
+                             girafeOutput("daily_sevenday_plot1",width="100%")),
+                    tabPanel("R Factor", 
+                             girafeOutput("R_plot0",width="100%"),
+                             girafeOutput("R_plot1",width="100%")),
+                    tabPanel("Testing", 
+                             girafeOutput("daily_testing_plot",width="100%")),
+                    tabPanel("Positivity", 
+                             girafeOutput("daily_positive_plot0",width="100%"),
+                             girafeOutput("daily_positive_plot1",width="100%")),
+                    tabPanel("Hospital Load", 
+                             girafeOutput("daily_hospital_plot0",width="100%"),
+                             girafeOutput("daily_hospital_plot1",width="100%"))
+                    
+                  )
+                
+              )
 
 
 ui <- dashboardPage(
@@ -70,28 +82,42 @@ ui <- dashboardPage(
 
 server <- function(input, output,session) {
     
-    #Get Data from files
-   
-    rds_file <- "retrieved_data.rds"
-    rds_url <- "https://github.com/carlosyanez/covid_austria_tracker/raw/master/retrieved_data.rds"
+  #####Get Data from files
   
-   download.file(rds_url,rds_file)
+  domain<-isolate(session$clientData$url_hostname)
+  message(domain)
+  rds_file <- "retrieved_data.rds"
+  
+  
+  if(grepl( "shinyapps.io", domain, fixed = TRUE)){
+     rds_url <- "https://github.com/carlosyanez/covid_austria_tracker/raw/master/retrieved_data.rds"
+    download.file(rds_url,rds_file)
+  }
   
    retrieved_data <- readRDS(rds_file)
-   colour_scale <- unique(retrieved_data$retrieved_data %>% select(State,state_colour))
+   retrieved_data$retrieved_data <- retrieved_data$retrieved_data %>% mutate(State_fct=as.factor(State))
+   data_to_plot <- retrieved_data$retrieved_data
    
+   
+   ###plotting functions
    source("plotting_functions.R") 
+   
+   ### parameters
    
     url <- a("AGES COVID19 Dashboard",
              href="https://covid19-dashboard.ages.at/")
+    url2 <- a("AGES - R Factor",
+             href="https://www.ages.at/wissen-aktuell/publikationen/epidemiologische-parameter-des-covid19-ausbruchs-oesterreich-20202021/")
   
    results <- reactiveValues()  
+   results$pre <- "No Filter"
    filter_value <-"Austria"
+   chart_hover_inv <-"opacity:0.55;"
+   chart_hover <- "stroke-width:2;"
+   chart_width_svg <- 12
+   chart_height_svg <- 6
    
-   beds_colour_scale <- tribble(~Type,~state_colour,
-                                "Hospital_Load","blue",
-                                "ICU_Load","purple")
-   
+
   predefined_dates <- c("No Filter",
                         "Last 7 Days",
                         "Last 4 Weeks",
@@ -99,9 +125,10 @@ server <- function(input, output,session) {
                         "Last 6 Months")
   
    results$filter_value <- filter_value
-   data_to_plot <- retrieved_data$retrieved_data
    
-    message("Initial Load")
+  ####LOAD
+   
+  message("Initial Load")
    
  
    updateDateRangeInput(session, "date",
@@ -110,86 +137,91 @@ server <- function(input, output,session) {
                           min =  min(data_to_plot$Date),
                           max = max(data_to_plot$Date))
  
-   updateSelectizeInput(session, 'dates_pre', choices = predefined_dates, server = TRUE)
-   updateSelectizeInput(session, 'state', choices = unique(data_to_plot$State), server = TRUE)
+   updateSelectizeInput(session, 'dates_pre', choices = predefined_dates, server = TRUE, selected="No Filter")
+   updateSelectizeInput(session, 'state', choices = unique(data_to_plot$State), server = TRUE,selected = "Austria")
    
    toListenPlot <- reactive({
      list(input$state,
-          input$date
+          input$date,
+          input$dates_pre
           )
    })
    
-   
-   observeEvent(input$dates_pre,
-                {
-                if(length(input$dates_pre)>0){
-                  filter_value <- input$state
-                  end_date <- max(retrieved_data$retrieved_data$Date)
-                  first_date <- min(retrieved_data$retrieved_data$Date)
-                  date_selector <- c(first_date,
-                                    end_date -ddays(6),
-                                    end_date - dweeks(4),
-                                    end_date - dmonths(4),
-                                    end_date - dmonths(6)
-                                    )
-                  
-                  start_date <- date_selector[which(input$dates_pre == predefined_dates)]
-                  
-                  if(length(as.character(start_date))==0){start_date <- first_date}
-                  
-                  updateDateRangeInput(session, "date",
-                                       start= start_date,
-                                       end = end_date,
-                                       min =first_date,
-                                       max = end_date)                  
-                  
-
-                  data_to_plot <- retrieved_data$retrieved_data  %>% filter(Date>=start_date & Date<=end_date)
-                
-                  
-                  results$new_plot <- new_cases_plot(data_to_plot,filter_value,colour_scale)
-                  results$active_plot <- active_cases_plot(data_to_plot,filter_value,colour_scale)    
-                  results$testing_plot <- testing_results_plot(data_to_plot,filter_value,colour_scale)
-                  results$positive_plot0 <- pos_plot00(data_to_plot,filter_value,colour_scale)    
-                  results$positive_plot1 <- pos_plot01(data_to_plot,filter_value,colour_scale)  
-                  results$hospital_plot0 <- load_plot00(data_to_plot,filter_value,beds_colour_scale) 
-                  results$hospital_plot1 <- load_plot01(data_to_plot,filter_value,beds_colour_scale)  
-                  results$sevenday_plot0 <-sevenday_plot00(data_to_plot,filter_value,colour_scale)
-                  results$sevenday_plot01 <-sevenday_plot01(data_to_plot,filter_value,colour_scale)
-                }
-                })
-   
-   
-   
-   observeEvent(toListenPlot(),
+     observeEvent(toListenPlot(),
                 {
                   filter_value <- input$state
                   start_date <- input$date[[1]]
                   end_date<- input$date[[2]]
+                  pre_date <- input$dates_pre
                   
-                  message(filter_value)
+                  ##check if predefined dates changed
+                  
+                  if(!(results$pre==pre_date)){
+                    
+                    end_date <- max(retrieved_data$retrieved_data$Date)
+                    first_date <- min(retrieved_data$retrieved_data$Date)
+                    date_selector <- c(first_date,
+                                       end_date -ddays(6),
+                                       end_date - dweeks(4),
+                                       end_date - dmonths(4),
+                                       end_date - dmonths(6)
+                    )
+  
+                    start_date <- date_selector[which(input$dates_pre == predefined_dates)]
+                    
+                    if(length(as.character(start_date))==0){start_date <- first_date}
+                    
+                    updateDateRangeInput(session, "date",
+                                         start= start_date,
+                                         end = end_date,
+                                         min =first_date,
+                                         max = end_date)  
+                    
+                  } 
+                  
+
+
                   if(length(input$date)==0){
                     data_to_plot <-   retrieved_data$retrieved_data
                   }else{
                     data_to_plot <- retrieved_data$retrieved_data  %>% filter(Date>=start_date & Date<=end_date)
                   }
                   
-                  results$new_plot <- new_cases_plot(data_to_plot,filter_value,colour_scale)
-                  results$active_plot <- active_cases_plot(data_to_plot,filter_value,colour_scale)    
-                  results$testing_plot <- testing_results_plot(data_to_plot,filter_value,colour_scale)
-                  results$positive_plot0 <- pos_plot00(data_to_plot,filter_value,colour_scale)    
-                  results$positive_plot1 <- pos_plot01(data_to_plot,filter_value,colour_scale)  
-                  results$hospital_plot0 <- load_plot00(data_to_plot,filter_value,beds_colour_scale) 
-                  results$hospital_plot1 <- load_plot01(data_to_plot,filter_value,beds_colour_scale) 
-                  results$sevenday_plot0 <-sevenday_plot00(data_to_plot,filter_value,colour_scale)
-                  results$sevenday_plot1 <-sevenday_plot01(data_to_plot,filter_value,colour_scale)
+                  hospital_data1 <- hospital_load_data(data_to_plot,filter_value,grid_value=FALSE)
+                  hospital_data2 <- hospital_load_data(data_to_plot,filter_value,grid_value=TRUE)
                   
+                  results$new_plot <- general_plotter(data_to_plot,"columns","CasesDaily",filter_value,
+                                                      "New Cases","State",plot_caption1,state_colour_scale)
+                  results$active_plot <- general_plotter(data_to_plot,"columns","ActiveCases",filter_value,
+                                                         "Active Cases","State",plot_caption1,state_colour_scale)
+                  results$testing_plot <- general_plotter(data_to_plot,"columns","TestedDaily",filter_value,
+                                                          "Daily Tests","State",plot_caption1,state_colour_scale)
+                  results$positive_plot0 <- general_plotter(data_to_plot,"lines","Positivity",filter_value,
+                                                            "Positivity Rate(%)","State",plot_caption1,state_colour_scale) 
+                  results$positive_plot1 <- general_plotter(data_to_plot,"linegrid","Positivity",filter_value,
+                                                            "Positivity Rate(%)","State",plot_caption1,state_colour_scale)    
+                  results$hospital_plot0 <- general_plotter(hospital_data1,"lines","load_value",filter_value,
+                                                            "Beds Load (%)","Load Type",plot_caption1,cscale=beds_colour_scale) 
+                  results$hospital_plot1 <- general_plotter(hospital_data2,"linegrid","load_value",filter_value,
+                                                            "Beds Load (%)","State",plot_caption1,cscale=beds_colour_scale)
+                  results$sevenday_plot0 <-general_plotter(data_to_plot,"lines","SevenDayIncidence",filter_value,
+                                                           "7 Day Incidence","State",plot_caption1,state_colour_scale)
+                  results$sevenday_plot01 <-general_plotter(data_to_plot,"linegrid","SevenDayIncidence",filter_value,
+                                                            "7 Day Incidence","State",plot_caption1,state_colour_scale)
+                  results$R_plot00 <-general_plotter(data_to_plot,"lines","R_eff",filter_value,
+                                                     "R Factor","State",plot_caption2,state_colour_scale)
+                  results$R_plot01 <-general_plotter(data_to_plot,"linegrid","R_eff",filter_value,
+                                                     "R Factor","State",plot_caption2,state_colour_scale)
                   
                 })
    
     
     output$source_link <- renderUI({
         tagList("Source: ", url)
+    })
+    
+    output$source_link2 <- renderUI({
+      tagList("and ",url2)
     })
     # Generate from and to Reference
     
@@ -208,41 +240,94 @@ server <- function(input, output,session) {
     })
     
     # Plot
-    output$daily_active_plot <- plotly::renderPlotly({
-        ggplotly(results$active_plot,tooltip = c("label", "colour"))
+    output$daily_active_plot <- renderGirafe({
+        girafe(ggobj=results$active_plot, width_svg = chart_width_svg, height_svg = chart_height_svg,
+               options = list(
+                 opts_hover_inv(css = chart_hover_inv),
+                 opts_hover(css = chart_hover)
+               ))
     })
     
-    output$daily_new_plot <- plotly::renderPlotly({
-      ggplotly(results$new_plot,tooltip = c("label", "colour"))
+    output$daily_new_plot <- renderGirafe({
+      girafe(ggobj=results$new_plot, width_svg = chart_width_svg, height_svg = chart_height_svg,
+             options = list(
+               opts_hover_inv(css = chart_hover_inv),
+               opts_hover(css = chart_hover)
+             ))
     })
     
-    output$daily_positive_plot0 <- plotly::renderPlotly({
-      ggplotly(results$positive_plot0,tooltip = c("label", "colour"))
+    output$daily_positive_plot0 <- renderGirafe({
+      girafe(ggobj=results$positive_plot0, width_svg = chart_width_svg, height_svg = chart_height_svg,
+             options = list(
+               opts_hover_inv(css = chart_hover_inv),
+               opts_hover(css = chart_hover)
+             ))
     })
     
-    output$daily_positive_plot1 <- plotly::renderPlotly({
-      ggplotly(results$positive_plot1,tooltip = c("label", "colour"))
+    output$daily_positive_plot1 <- renderGirafe({
+      girafe(ggobj=results$positive_plot1, width_svg = chart_width_svg, height_svg = chart_height_svg,
+             options = list(
+               opts_hover_inv(css = chart_hover_inv),
+               opts_hover(css = chart_hover)
+             ))
     })
     
-    output$daily_testing_plot <- plotly::renderPlotly({
-      ggplotly(results$testing_plot,tooltip = c("label", "colour"))
+    output$daily_testing_plot <- renderGirafe({
+      girafe(ggobj=results$testing_plot, width_svg = chart_width_svg, height_svg = chart_height_svg,
+             options = list(
+               opts_hover_inv(css = chart_hover_inv),
+               opts_hover(css = chart_hover)
+             ))
     })
     
-    output$daily_hospital_plot0 <- plotly::renderPlotly({
-      ggplotly(results$hospital_plot0,tooltip = c("label", "colour"))
+    output$daily_hospital_plot0 <- renderGirafe({
+      girafe(ggobj=results$hospital_plot0, width_svg = chart_width_svg, height_svg = chart_height_svg,
+             options = list(
+               opts_hover_inv(css = chart_hover_inv),
+               opts_hover(css = chart_hover)
+             ))
     })
     
-    output$daily_hospital_plot1 <- plotly::renderPlotly({
-      ggplotly(results$hospital_plot1,tooltip = c("label", "colour"))
+    output$daily_hospital_plot1 <- renderGirafe({
+      girafe(ggobj=results$hospital_plot1, width_svg = chart_width_svg, height_svg = chart_height_svg,
+             options = list(
+               opts_hover_inv(css = chart_hover_inv),
+               opts_hover(css = chart_hover)
+             ))
     })
     
-    output$daily_sevenday_plot0 <- plotly::renderPlotly({
-      ggplotly(results$sevenday_plot0,tooltip = c("label", "colour"))
+    output$daily_sevenday_plot0 <- renderGirafe({
+      girafe(ggobj=results$sevenday_plot0, width_svg = chart_width_svg, height_svg = chart_height_svg,
+             options = list(
+               opts_hover_inv(css = chart_hover_inv),
+               opts_hover(css = chart_hover)
+             ))
     })
     
-    output$daily_sevenday_plot1 <- plotly::renderPlotly({
-      ggplotly(results$sevenday_plot01,tooltip = c("label", "colour"))
+    output$daily_sevenday_plot1 <- renderGirafe({
+      girafe(ggobj=results$sevenday_plot01, width_svg = chart_width_svg, height_svg = chart_height_svg,
+             options = list(
+               opts_hover_inv(css = chart_hover_inv),
+               opts_hover(css = chart_hover)
+             ))
     })
+    
+    output$R_plot0 <- renderGirafe({
+      girafe(ggobj=results$R_plot00, width_svg = chart_width_svg, height_svg = chart_height_svg,
+             options = list(
+               opts_hover_inv(css = chart_hover_inv),
+               opts_hover(css = chart_hover)
+             ))
+    })
+    
+    output$R_plot1 <- renderGirafe({
+      girafe(ggobj=results$R_plot01, width_svg = chart_width_svg, height_svg = chart_height_svg,
+             options = list(
+               opts_hover_inv(css = chart_hover_inv),
+               opts_hover(css = chart_hover)
+             ))
+    })
+    
     
 }
 
