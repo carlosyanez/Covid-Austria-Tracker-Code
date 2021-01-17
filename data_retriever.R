@@ -8,10 +8,19 @@ library(forcats)
 library(magrittr)
 library(lubridate)
 
+if(version$platform=="x86_64-apple-darwin17.0"){
+  temp <- "./data.zip"
+  setwd("~/Google Drive/GitHub/Covid-Austria-Tracker-Code")
+  file_path <-"./"
+  
+}else{
+  setwd("/opt/shinyserver/apps/covid_vienna")
+  file_path<-"/opt/shinyserver/apps/covid_vienna/"
+  temp <- "/opt/shinyserver/apps/covid_vienna/data.zip"
+  
+}
 
-#setwd("/opt/shinyserver/apps/covid_vienna")
-#file_path<-"/opt/shinyserver/apps/covid_vienna/"
-file_path <-"./"
+
 
 extract_filename <- c("CovidFaelle_Timeline",
                       "CovidFallzahlen",
@@ -38,8 +47,7 @@ state_translation <- tribble(~Bundesland,~State,~state_colour,
 
      
 
-#temp <- "/opt/shinyserver/apps/covid_vienna/data.zip"
-temp <- "./data.zip"
+
 download.file("https://covid19-dashboard.ages.at/data/data.zip",temp)
 unzip(temp,paste(extract_filename,".csv",sep=""),exdir=file_path)
 if(file.exists(paste("./data","_",Sys.Date(),".zip",sep=""))) file.remove(paste("./data","_",Sys.Date(),".zip",sep=""))

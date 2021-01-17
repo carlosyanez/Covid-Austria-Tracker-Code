@@ -13,6 +13,8 @@ library(lubridate)
 library(ggthemes)
 library(htmltools)
 library(showtext)
+library(patchwork)
+library(pins)
 
 
 # Shiny UI's function
@@ -22,25 +24,30 @@ header <- dashboardHeader(title = "Covid in Austria"#,
                                            )
 
 sidebar <-dashboardSidebar(
+  h3("Sources"),
+  uiOutput("source_link"),
+  uiOutput("source_link2"),
+  uiOutput("measurement_times"),
+  h3("Filters"),
+  selectizeInput('state', 'State', choices = "Loading..."),
+  selectizeInput('dates_pre', 'Predefined Dates', choices = "Loading..."),
+  dateRangeInput("date", "Free Dates Selection", start = NULL,
+                 end =NULL, min = NULL,
+                 max = NULL, format = "yyyy-mm-dd", startview = "month", weekstart = 0,
+                 language = "en", separator = " to ", width = NULL)
+  
+#  sidebarMenu(
 
-  sidebarMenu(
 
-    uiOutput("source_link"),
-    uiOutput("source_link2"),
-    uiOutput("measurement_times"),
 #    uiOutput("blank1"),
 #    uiOutput("blank2"),
 #    uiOutput("blank3"),
-    menuItem("Filters", icon = icon("filter"),
+ 
+    #menuItem("Filters", icon = icon("filter"),
              
-             selectizeInput('state', 'State', choices = "Loading..."),
-             selectizeInput('dates_pre', 'Predefined Dates', choices = "Loading..."),
-             dateRangeInput("date", "Free Dates Selection", start = NULL,
-                            end =NULL, min = NULL,
-                            max = NULL, format = "yyyy-mm-dd", startview = "month", weekstart = 0,
-                            language = "en", separator = " to ", width = NULL)
-    )
-    )
+
+    #)
+#    )
 )
 
 
@@ -50,24 +57,21 @@ body <-   dashboardBody(
                   tabBox(
                     # The id lets us use input$tabset1 on the server to find the current tab
                     id = "tabset1", width = "100%",
-                    tabPanel("New and Active", 
-                             girafeOutput("daily_active_plot",width="100%"),
-                             girafeOutput("daily_new_plot",width="100%")),
+                    tabPanel("New Cases", 
+                             girafeOutput("daily_new_plot",width="100%",height="50%")),
+                    tabPanel("Active Cases", 
+                             girafeOutput("daily_active_plot",width="100%",height="50%")),
                     tabPanel("7-Day Trend", 
-                             girafeOutput("daily_sevenday_plot0",width="100%"),
-                             girafeOutput("daily_sevenday_plot1",width="100%")),
+                             girafeOutput("daily_sevenday_plot",width="100%",height="50%")),
                     tabPanel("R Factor", 
-                             girafeOutput("R_plot0",width="100%"),
-                             girafeOutput("R_plot1",width="100%")),
+                             girafeOutput("R_plot",width="100%",height="50%")),
                     tabPanel("Testing", 
-                             girafeOutput("daily_testing_plot",width="100%")),
+                             girafeOutput("daily_testing_plot",width="100%",height="50%")),
                     tabPanel("Positivity", 
-                             girafeOutput("daily_positive_plot0",width="100%"),
-                             girafeOutput("daily_positive_plot1",width="100%")),
+                             girafeOutput("daily_positive_plot",width="100%",height="50%")),
                     tabPanel("Hospital Load", 
-                             girafeOutput("daily_hospital_plot0",width="100%"),
-                             girafeOutput("daily_hospital_plot1",width="100%"))
-                    
+                             girafeOutput("daily_hospital_plot",width="100%",height="50%"))
+
                   )
                 
               )
@@ -86,16 +90,12 @@ server <- function(input, output,session) {
   
   domain<-isolate(session$clientData$url_hostname)
   message(domain)
-  rds_file <- "retrieved_data.rds"
-  
-  
-  if(grepl( "shinyapps.io", domain, fixed = TRUE)){
-     rds_url <- "https://github.com/carlosyanez/covid_austria_tracker/raw/master/retrieved_data.rds"
-    download.file(rds_url,rds_file)
-  }
+
+     rds_file <- pin("https://github.com/carlosyanez/covid_austria_tracker/raw/master/retrieved_data.rds")
+
   
    retrieved_data <- readRDS(rds_file)
-   retrieved_data$retrieved_data <- retrieved_data$retrieved_data %>% mutate(State_fct=as.factor(State))
+   retrieved_data$retrieved_data <- retrieved_data$retrieved_data %>% mutate(State_fct=State)
    data_to_plot <- retrieved_data$retrieved_data
    
    
@@ -114,8 +114,8 @@ server <- function(input, output,session) {
    filter_value <-"Austria"
    chart_hover_inv <-"opacity:0.55;"
    chart_hover <- "stroke-width:2;"
-   chart_width_svg <- 12
-   chart_height_svg <- 6
+   chart_width_svg <- 16
+   chart_height_svg <- 9
    
 
   predefined_dates <- c("No Filter",
@@ -161,10 +161,10 @@ server <- function(input, output,session) {
                     end_date <- max(retrieved_data$retrieved_data$Date)
                     first_date <- min(retrieved_data$retrieved_data$Date)
                     date_selector <- c(first_date,
-                                       end_date -ddays(6),
-                                       end_date - dweeks(4),
-                                       end_date - dmonths(4),
-                                       end_date - dmonths(6)
+                                       end_date -lubridate::ddays(6),
+                                       end_date - lubridate::dweeks(4),
+                                       end_date - lubridate::dmonths(4),
+                                       end_date - lubridate::dmonths(6)
                     )
   
                     start_date <- date_selector[which(input$dates_pre == predefined_dates)]
@@ -190,20 +190,28 @@ server <- function(input, output,session) {
                   hospital_data1 <- hospital_load_data(data_to_plot,filter_value,grid_value=FALSE)
                   hospital_data2 <- hospital_load_data(data_to_plot,filter_value,grid_value=TRUE)
                   
-                  results$new_plot <- general_plotter(data_to_plot,"columns","CasesDaily",filter_value,
+                  results$new_plot0 <- general_plotter(data_to_plot,"columns","CasesDaily",filter_value,
                                                       "New Cases","State",plot_caption1,state_colour_scale)
-                  results$active_plot <- general_plotter(data_to_plot,"columns","ActiveCases",filter_value,
+                  results$new_plot1 <- general_plotter(data_to_plot,"columngrid","CasesDaily",filter_value,
+                                                       "New Cases","State",plot_caption1,state_colour_scale)
+                  results$active_plot0 <- general_plotter(data_to_plot,"columns","ActiveCases",filter_value,
                                                          "Active Cases","State",plot_caption1,state_colour_scale)
-                  results$testing_plot <- general_plotter(data_to_plot,"columns","TestedDaily",filter_value,
-                                                          "Daily Tests","State",plot_caption1,state_colour_scale)
+                  results$active_plot1 <- general_plotter(data_to_plot,"columngrid","ActiveCases",filter_value,
+                                                          "Active Cases","State",plot_caption1,state_colour_scale)
+                  results$testing_plot0 <- general_plotter(data_to_plot,"columns","TestedDaily",filter_value,
+                                                          "Daily Tests","State",plot_caption1,state_colour_scale,
+                                                          y_max=15)
+                  results$testing_plot1 <- general_plotter(data_to_plot,"columngrid","TestedDaily",filter_value,
+                                                           "Daily Tests","State",plot_caption1,state_colour_scale,
+                                                           y_max=15)
                   results$positive_plot0 <- general_plotter(data_to_plot,"lines","Positivity",filter_value,
                                                             "Positivity Rate(%)","State",plot_caption1,state_colour_scale) 
                   results$positive_plot1 <- general_plotter(data_to_plot,"linegrid","Positivity",filter_value,
                                                             "Positivity Rate(%)","State",plot_caption1,state_colour_scale)    
                   results$hospital_plot0 <- general_plotter(hospital_data1,"lines","load_value",filter_value,
-                                                            "Beds Load (%)","Load Type",plot_caption1,cscale=beds_colour_scale) 
+                                                            "Hospital Bed Load (%)","Load Type",plot_caption1,cscale=beds_colour_scale) 
                   results$hospital_plot1 <- general_plotter(hospital_data2,"linegrid","load_value",filter_value,
-                                                            "Beds Load (%)","State",plot_caption1,cscale=beds_colour_scale)
+                                                            "Hospital Bed Load (%)","Load Type",plot_caption1,cscale=beds_colour_scale)
                   results$sevenday_plot0 <-general_plotter(data_to_plot,"lines","SevenDayIncidence",filter_value,
                                                            "7 Day Incidence","State",plot_caption1,state_colour_scale)
                   results$sevenday_plot01 <-general_plotter(data_to_plot,"linegrid","SevenDayIncidence",filter_value,
@@ -241,7 +249,8 @@ server <- function(input, output,session) {
     
     # Plot
     output$daily_active_plot <- renderGirafe({
-        girafe(ggobj=results$active_plot, width_svg = chart_width_svg, height_svg = chart_height_svg,
+        girafe(ggobj=(results$active_plot0 / results$active_plot1),
+               width_svg = chart_width_svg, height_svg = chart_height_svg,
                options = list(
                  opts_hover_inv(css = chart_hover_inv),
                  opts_hover(css = chart_hover)
@@ -249,85 +258,62 @@ server <- function(input, output,session) {
     })
     
     output$daily_new_plot <- renderGirafe({
-      girafe(ggobj=results$new_plot, width_svg = chart_width_svg, height_svg = chart_height_svg,
+      girafe(ggobj=(results$new_plot0 / results$new_plot1), 
+             width_svg = chart_width_svg, height_svg = chart_height_svg,
              options = list(
                opts_hover_inv(css = chart_hover_inv),
                opts_hover(css = chart_hover)
              ))
     })
     
-    output$daily_positive_plot0 <- renderGirafe({
-      girafe(ggobj=results$positive_plot0, width_svg = chart_width_svg, height_svg = chart_height_svg,
+    output$daily_positive_plot <- renderGirafe({
+      girafe(ggobj=(results$positive_plot0 / results$positive_plot1),
+             width_svg = chart_width_svg, height_svg = chart_height_svg,
              options = list(
                opts_hover_inv(css = chart_hover_inv),
                opts_hover(css = chart_hover)
              ))
     })
     
-    output$daily_positive_plot1 <- renderGirafe({
-      girafe(ggobj=results$positive_plot1, width_svg = chart_width_svg, height_svg = chart_height_svg,
-             options = list(
-               opts_hover_inv(css = chart_hover_inv),
-               opts_hover(css = chart_hover)
-             ))
-    })
-    
+  
     output$daily_testing_plot <- renderGirafe({
-      girafe(ggobj=results$testing_plot, width_svg = chart_width_svg, height_svg = chart_height_svg,
+      girafe(ggobj=(results$testing_plot0 / results$testing_plot1), 
+             width_svg = chart_width_svg, height_svg = chart_height_svg,
              options = list(
                opts_hover_inv(css = chart_hover_inv),
                opts_hover(css = chart_hover)
              ))
     })
     
-    output$daily_hospital_plot0 <- renderGirafe({
-      girafe(ggobj=results$hospital_plot0, width_svg = chart_width_svg, height_svg = chart_height_svg,
+    output$daily_hospital_plot <- renderGirafe({
+      girafe(ggobj=(results$hospital_plot0 / results$hospital_plot1),
+             width_svg = chart_width_svg, height_svg = chart_height_svg,
              options = list(
                opts_hover_inv(css = chart_hover_inv),
                opts_hover(css = chart_hover)
              ))
     })
     
-    output$daily_hospital_plot1 <- renderGirafe({
-      girafe(ggobj=results$hospital_plot1, width_svg = chart_width_svg, height_svg = chart_height_svg,
+    output$daily_sevenday_plot <- renderGirafe({
+      girafe(ggobj=(results$sevenday_plot0 / results$sevenday_plot01),
+             width_svg = chart_width_svg, height_svg = chart_height_svg,
              options = list(
                opts_hover_inv(css = chart_hover_inv),
                opts_hover(css = chart_hover)
              ))
     })
     
-    output$daily_sevenday_plot0 <- renderGirafe({
-      girafe(ggobj=results$sevenday_plot0, width_svg = chart_width_svg, height_svg = chart_height_svg,
+
+    output$R_plot <- renderGirafe({
+      girafe(ggobj=(results$R_plot00 / results$R_plot01), 
+             width_svg = chart_width_svg, height_svg = chart_height_svg,
              options = list(
                opts_hover_inv(css = chart_hover_inv),
                opts_hover(css = chart_hover)
              ))
     })
     
-    output$daily_sevenday_plot1 <- renderGirafe({
-      girafe(ggobj=results$sevenday_plot01, width_svg = chart_width_svg, height_svg = chart_height_svg,
-             options = list(
-               opts_hover_inv(css = chart_hover_inv),
-               opts_hover(css = chart_hover)
-             ))
-    })
-    
-    output$R_plot0 <- renderGirafe({
-      girafe(ggobj=results$R_plot00, width_svg = chart_width_svg, height_svg = chart_height_svg,
-             options = list(
-               opts_hover_inv(css = chart_hover_inv),
-               opts_hover(css = chart_hover)
-             ))
-    })
-    
-    output$R_plot1 <- renderGirafe({
-      girafe(ggobj=results$R_plot01, width_svg = chart_width_svg, height_svg = chart_height_svg,
-             options = list(
-               opts_hover_inv(css = chart_hover_inv),
-               opts_hover(css = chart_hover)
-             ))
-    })
-    
+
     
 }
 
