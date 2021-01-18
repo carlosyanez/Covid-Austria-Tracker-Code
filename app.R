@@ -187,9 +187,8 @@ server <- function(input, output,session) {
                     data_to_plot <- retrieved_data$retrieved_data  %>% filter(Date>=start_date & Date<=end_date)
                   }
                   
-                  hospital_data1 <- hospital_load_data(data_to_plot,filter_value,grid_value=FALSE)
-                  hospital_data2 <- hospital_load_data(data_to_plot,filter_value,grid_value=TRUE)
-                  
+                  hospital_data <- pivot_data(data_to_plot,c("Hospital_Load","ICU_Load"))
+
                   results$new_plot0 <- general_plotter(data_to_plot,"columns","CasesDaily",filter_value,
                                                       "New Cases","State",plot_caption1,state_colour_scale)
                   results$new_plot1 <- general_plotter(data_to_plot,"columngrid","CasesDaily",filter_value,
@@ -208,18 +207,18 @@ server <- function(input, output,session) {
                                                             "Positivity Rate(%)","State",plot_caption1,state_colour_scale) 
                   results$positive_plot1 <- general_plotter(data_to_plot,"linegrid","Positivity",filter_value,
                                                             "Positivity Rate(%)","State",plot_caption1,state_colour_scale)    
-                  results$hospital_plot0 <- general_plotter(hospital_data1,"lines","load_value",filter_value,
+                  results$hospital_plot0 <- general_plotter(hospital_data,"lines","load_value",filter_value,
                                                             "Hospital Bed Load (%)","Load Type",plot_caption1,cscale=beds_colour_scale) 
-                  results$hospital_plot1 <- general_plotter(hospital_data2,"linegrid","load_value",filter_value,
+                  results$hospital_plot1 <- general_plotter(hospital_data,"linegrid","load_value",filter_value,
                                                             "Hospital Bed Load (%)","Load Type",plot_caption1,cscale=beds_colour_scale)
                   results$sevenday_plot0 <-general_plotter(data_to_plot,"lines","SevenDayIncidence",filter_value,
-                                                           "7 Day Incidence","State",plot_caption1,state_colour_scale)
+                                                           "7 Day Incidence","State",plot_caption1,state_colour_scale,h_line=50)
                   results$sevenday_plot01 <-general_plotter(data_to_plot,"linegrid","SevenDayIncidence",filter_value,
-                                                            "7 Day Incidence","State",plot_caption1,state_colour_scale)
+                                                            "7 Day Incidence","State",plot_caption1,state_colour_scale,h_line=50)
                   results$R_plot00 <-general_plotter(data_to_plot,"lines","R_eff",filter_value,
-                                                     "R Factor","State",plot_caption2,state_colour_scale)
+                                                     "R Factor","State",plot_caption2,state_colour_scale,h_line=0.9)
                   results$R_plot01 <-general_plotter(data_to_plot,"linegrid","R_eff",filter_value,
-                                                     "R Factor","State",plot_caption2,state_colour_scale)
+                                                     "R Factor","State",plot_caption2,state_colour_scale,h_line=0.9)
                   
                 })
    

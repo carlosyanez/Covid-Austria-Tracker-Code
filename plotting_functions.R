@@ -25,25 +25,21 @@ plot_caption2 <- "Data: Österreichische Agentur für Ernährungssicherheit"
 font_add_google("Roboto","Roboto")
 showtext_auto()
 
-hospital_load_data <- function(retrieved_data,filter_value,grid_value=FALSE){
+pivot_data <- function(retrieved_data,pivot_string){
   
-  if(grid_value==FALSE){
-    
-    data <- retrieved_data %>% filter(State==filter_value)
-    
-  }else{
-    
-    data <- retrieved_data %>% filter(!(State==filter_value))
-  }
-  data %>%
-    select(Date,State,Hospital_Load,ICU_Load,FZHosp,FZICU,FZHospFree,FZICUFree) %>%
-    pivot_longer(c(-Date,-FZHosp,-FZICU,-FZHospFree,-FZICUFree,-State),
+  data <-retrieved_data %>%
+    select(Date,State,matches(str_c(pivot_string,collapse = "|"))) %>%
+    pivot_longer(c(-Date,-State),
                  values_to="load_value",names_to="Type") %>%
     mutate(State_fct=(str_replace(Type,"_"," ")))   %>%
     select(Date,State,State_fct,load_value)
+  
+  data 
 }
 
-general_plotter <- function(retrieved_data,chart_type,y_values,filter_value,y_label,group_name,plot_caption,cscale,y_max=-1){
+
+general_plotter <- function(retrieved_data,chart_type,y_values,filter_value,y_label,group_name,plot_caption,
+                            cscale,y_max=-1,h_line=0){
   
   message(str_c(y_values,chart_type,sep=" - "))
           
@@ -57,10 +53,7 @@ general_plotter <- function(retrieved_data,chart_type,y_values,filter_value,y_la
                          y_label,": ", 
                          format(round(y_value,2), nsmall=2, big.mark=","))) %>% 
     arrange(Date)
-  
-  message(colnames(plotting_data))
-  
-  
+
   if(nrow(plotting_data)==0){
     p <- ggplot()
     
@@ -75,9 +68,7 @@ general_plotter <- function(retrieved_data,chart_type,y_values,filter_value,y_la
     
     outliers <- plotting_data %>% filter(outofrange)  %>% select(-outofrange)
     plotting_data <- plotting_data %>% filter(!outofrange) %>% select(-outofrange)
-    message(colnames(plotting_data))
-    message(colnames(outliers))
-    
+
     if(nrow(outliers)>0){
         outliers <- outliers %>% mutate(y_value=max(plotting_data$y_value)*1.05) %>% 
         mutate(State_fct="Outliers")
@@ -132,9 +123,15 @@ general_plotter <- function(retrieved_data,chart_type,y_values,filter_value,y_la
     
     p<- p + geom_point_interactive(data=outliers,
                                   aes(x=Date,y=y_value,tooltip=tooltip_text,data_id=State_fct,group=1),
-                                  shape=18,size=3,colour="#ab4802")+
-      scale_colour_manual(group_name, values = (colour_scale %>% select(state_colour) %>% pull(.))) 
+                                  shape=18,size=3,colour="#de8f28",show.legend=FALSE)
     
+    
+  }
+    
+  if(!(h_line==0)){
+    
+    p<- p + geom_hline(yintercept = h_line,show.legend = FALSE,colour="#de8f28",linetype="twodash",size=1)
+
     
   }
   
@@ -160,7 +157,6 @@ general_plotter <- function(retrieved_data,chart_type,y_values,filter_value,y_la
   
   }
   
-  message(colnames(plotting_data))
   return(p)
   
 }
