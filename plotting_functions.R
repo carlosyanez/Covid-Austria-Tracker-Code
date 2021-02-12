@@ -62,7 +62,7 @@ general_plotter <- function(retrieved_data,chart_type,y_values,filter_value,y_la
 
   if(!(y_max==-1)){
 
-    qvalue <- quantile(plotting_data$y_value,0.8)*y_max
+    qvalue <- quantile(plotting_data$y_value,0.9)*y_max
     
     plotting_data <- plotting_data %>% mutate(outofrange=(y_value>=qvalue))
     

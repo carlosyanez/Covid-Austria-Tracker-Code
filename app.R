@@ -91,7 +91,8 @@ server <- function(input, output,session) {
   domain<-isolate(session$clientData$url_hostname)
   message(domain)
 
-     rds_file <- pin("https://github.com/carlosyanez/covid_austria_tracker/raw/master/retrieved_data.rds")
+  if(domain=="127.0.0.1") rds_file <- pin("retrieved_data.rds")
+  else                    rds_file <- pin("https://github.com/carlosyanez/covid_austria_tracker/raw/master/retrieved_data.rds")
 
   
    retrieved_data <- readRDS(rds_file)
